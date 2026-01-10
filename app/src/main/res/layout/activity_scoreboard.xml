@@ -3,3 +3,10 @@
     android:id="@+id/listViewScores"
     android:layout_width="match_parent"
     android:layout_height="match_parent"/>
+
+<Button
+android:id="@+id/btnResetScores"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:text="Reset Scores"
+android:layout_margin="8dp"/>

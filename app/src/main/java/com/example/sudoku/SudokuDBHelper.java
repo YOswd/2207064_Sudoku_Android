@@ -33,6 +33,7 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE scoreboard(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "difficulty TEXT," +
+                "player_name TEXT," +
                 "time INTEGER)");
 
         insertPuzzle(db,"easy","530070000600195000098000060800060003400803001700020006060000280000419005000080079");
@@ -116,9 +117,10 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         return null;
     }
 
-    public void insertScore(String difficulty, int time) {
+    public void insertScore(String difficulty, int time, String name) {
         ContentValues cv = new ContentValues();
         cv.put("difficulty", difficulty);
+        cv.put("player_name", name);
         cv.put("time", time);
         getWritableDatabase().insert("scoreboard", null, cv);
     }
@@ -126,6 +128,10 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
     public Cursor getScores() {
         return getReadableDatabase()
                 .rawQuery("SELECT * FROM scoreboard ORDER BY time ASC", null);
+    }
+
+    public void resetScoreboard() {
+        getWritableDatabase().delete("scoreboard", null, null);
     }
 
     public String boardToString(int[][] b) {

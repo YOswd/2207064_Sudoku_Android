@@ -28,6 +28,14 @@ public class ScoreboardActivity extends AppCompatActivity {
         if (diff != null) difficulty = diff;
 
         loadScores();
+
+        Button btnReset = findViewById(R.id.btnResetScores);
+        btnReset.setOnClickListener(v -> {
+            dbHelper.resetScoreboard();
+            loadScores();
+            Toast.makeText(this, "Scoreboard reset!", Toast.LENGTH_SHORT).show();
+        });
+
     }
 
     private void loadScores() {
