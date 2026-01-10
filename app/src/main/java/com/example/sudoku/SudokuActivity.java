@@ -1,9 +1,12 @@
 package com.example.sudoku;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -12,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,11 +33,16 @@ public class SudokuActivity extends AppCompatActivity {
     private GridLayout grid;
     private LinearLayout parentLayout;
     private LinearLayout buttonLayout;
-    private static final int COLOR_SELECTED = Color.parseColor("#B3E5FC"); // light blue
-    private static final int COLOR_RELATED  = Color.parseColor("#E1F5FE"); // lighter blue
+    private TextView timerView;
+
+    private Button btnSolve, btnClear, btnNew, btnSave;
+
+    private static final int COLOR_SELECTED = Color.parseColor("#B3E5FC");
+    private static final int COLOR_RELATED  = Color.parseColor("#E1F5FE");
     private static final int COLOR_NORMAL   = Color.WHITE;
     private static final int COLOR_FIXED    = Color.LTGRAY;
-    private static final int COLOR_ERROR    = Color.parseColor("#FFCDD2"); // light red
+
+    private long startTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,19 +57,30 @@ public class SudokuActivity extends AppCompatActivity {
         grid = findViewById(R.id.sudokuGrid);
         parentLayout = findViewById(R.id.parentLayout);
         buttonLayout = findViewById(R.id.buttonLayout);
+        
+        timerView = new TextView(this);
+        timerView.setTextSize(18);
+        timerView.setTextColor(Color.BLACK);
+        timerView.setGravity(Gravity.CENTER);
+        parentLayout.addView(timerView, 0);
+        startTime = SystemClock.elapsedRealtime();
 
         loadNewPuzzle();
-        parentLayout.post(() -> { // ensure layout measured before sizing
-            setupGrid();
-            setupButtons();
-        });
+        setupGrid();
+        setupButtons();
     }
 
-    /** Load a random puzzle from DB **/
     private void loadNewPuzzle() {
-        initialBoard = dbHelper.getRandomPuzzle(difficulty);
-        copyInitialToCurrent();
-        isSolved = false;
+        int[][] puzzle = dbHelper.getRandomPuzzle(difficulty);
+        if (puzzle != null) {
+            initialBoard = puzzle;
+            copyInitialToCurrent();
+            isSolved = false;
+            startTime = SystemClock.elapsedRealtime();
+            updateTimer();
+        } else {
+            Toast.makeText(this, "No puzzle found for " + difficulty, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void copyInitialToCurrent() {
@@ -68,20 +88,19 @@ public class SudokuActivity extends AppCompatActivity {
             System.arraycopy(initialBoard[r], 0, currentBoard[r], 0, 9);
     }
 
-    /** Setup the 9x9 grid **/
     private void setupGrid() {
         grid.removeAllViews();
         grid.setColumnCount(9);
         grid.setRowCount(9);
 
-        int parentWidth = parentLayout.getWidth() - dpToPx(16);
-        int parentHeight = parentLayout.getHeight() - dpToPx(16);
+        int screenWidth = getResources().getDisplayMetrics().widthPixels - dpToPx(16);
+        int screenHeight = getResources().getDisplayMetrics().heightPixels - dpToPx(16);
 
         boolean isLandscape =
                 getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
 
-        int buttonSpace = isLandscape ? buttonLayout.getWidth() : 0;
-        int boardSize = Math.min(parentWidth - buttonSpace, parentHeight);
+        int buttonArea = isLandscape ? dpToPx(100) : 0;
+        int boardSize = isLandscape ? Math.min(screenWidth - buttonArea, screenHeight) : Math.min(screenWidth, screenHeight);
         int cellSize = boardSize / 9;
 
         for (int r = 0; r < 9; r++) {
@@ -93,16 +112,19 @@ public class SudokuActivity extends AppCompatActivity {
                 cell.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1)});
 
                 int value = initialBoard[r][c];
+
                 GradientDrawable bg = new GradientDrawable();
+                bg.setStroke(dpToPx(1), Color.BLACK);
                 bg.setColor(value != 0 ? COLOR_FIXED : COLOR_NORMAL);
-                bg.setStroke(1, Color.BLACK);
                 cell.setBackground(bg);
 
                 GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
                 lp.width = cellSize;
                 lp.height = cellSize;
-                lp.setMargins((c % 3 == 0) ? 4 : 1, (r % 3 == 0) ? 4 : 1,
-                        (c == 8) ? 4 : 1, (r == 8) ? 4 : 1);
+                lp.setMargins((c % 3 == 0) ? dpToPx(2) : dpToPx(1),
+                        (r % 3 == 0) ? dpToPx(2) : dpToPx(1),
+                        (c == 8) ? dpToPx(2) : dpToPx(1),
+                        (r == 8) ? dpToPx(2) : dpToPx(1));
                 cell.setLayoutParams(lp);
 
                 if (value != 0) {
@@ -112,7 +134,9 @@ public class SudokuActivity extends AppCompatActivity {
                 } else {
                     cell.setText("");
                     cell.setTextColor(Color.BLACK);
-                    final int row = r, col = c;
+
+                    final int row = r;
+                    final int col = c;
 
                     cell.setOnClickListener(v -> {
                         selectedCell = cell;
@@ -121,10 +145,13 @@ public class SudokuActivity extends AppCompatActivity {
 
                     cell.addTextChangedListener(new android.text.TextWatcher() {
                         @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                        @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                            currentBoard[row][col] = s.toString().isEmpty() ? 0 : Integer.parseInt(s.toString());
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+                            String t = s.toString();
+                            currentBoard[row][col] = t.isEmpty() ? 0 : Integer.parseInt(t);
                             highlightRuleBreaks();
-                            checkCompletion();
+                            checkGameCompletion();
+                            updateTimer();
                         }
                         @Override public void afterTextChanged(Editable s) {}
                     });
@@ -137,14 +164,13 @@ public class SudokuActivity extends AppCompatActivity {
         highlightRuleBreaks();
     }
 
-    /** Setup bottom/right buttons **/
     private void setupButtons() {
         buttonLayout.removeAllViews();
 
-        Button btnSolve = new Button(this); btnSolve.setText("Solve");
-        Button btnClear = new Button(this); btnClear.setText("Clear");
-        Button btnNew = new Button(this); btnNew.setText("New");
-        Button btnSave = new Button(this); btnSave.setText("Save");
+        btnSolve = new Button(this); btnSolve.setText("Solve");
+        btnClear = new Button(this); btnClear.setText("Clear");
+        btnNew = new Button(this); btnNew.setText("New");
+        btnSave = new Button(this); btnSave.setText("Save");
 
         Button[] buttons = {btnSolve, btnClear, btnNew, btnSave};
 
@@ -160,29 +186,57 @@ public class SudokuActivity extends AppCompatActivity {
 
         btnSolve.setOnClickListener(v -> {
             if (isSolved) return;
-            if (solveSudoku()) Toast.makeText(this, "Solved!", Toast.LENGTH_SHORT).show();
-            else Toast.makeText(this, "Cannot solve puzzle", Toast.LENGTH_SHORT).show();
-            isSolved = true;
+
+            if (solveSudoku()) {
+                Toast.makeText(this, "Puzzle solved!", Toast.LENGTH_SHORT).show();
+                isSolved = true;
+
+                btnSave.setEnabled(false);
+                btnClear.setEnabled(false);
+
+                showScoreDialog();
+            } else {
+                Toast.makeText(this, "Cannot solve puzzle", Toast.LENGTH_SHORT).show();
+            }
         });
 
-        btnClear.setOnClickListener(v -> { if (!isSolved) clearUserCells(); });
+        btnClear.setOnClickListener(v -> {
+            if (!isSolved) clearUserCells();
+        });
+
+        btnNew.setOnClickListener(v -> {
+            int[][] puzzle = dbHelper.getRandomPuzzle(difficulty);
+            if (puzzle != null) {
+                initialBoard = puzzle;
+                copyInitialToCurrent();
+                isSolved = false;
+                btnSave.setEnabled(true);
+                btnClear.setEnabled(true);
+                setupGrid();
+                startTime = SystemClock.elapsedRealtime();
+                updateTimer();
+            } else {
+                Toast.makeText(this, "No puzzle found for " + difficulty, Toast.LENGTH_SHORT).show();
+            }
+        });
 
         btnSave.setOnClickListener(v -> {
-            dbHelper.saveGame(difficulty, initialBoard, currentBoard);
-            Toast.makeText(this, "Game saved!", Toast.LENGTH_SHORT).show();
+            if (!isSolved) {
+                dbHelper.saveGame(difficulty, initialBoard, currentBoard);
+                Toast.makeText(this, "Game saved!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Cannot save solved game", Toast.LENGTH_SHORT).show();
+            }
         });
-
-        btnNew.setOnClickListener(v -> { loadNewPuzzle(); setupGrid(); });
     }
 
-    /** Highlight duplicates and invalid numbers **/
     private void highlightRuleBreaks() {
         for (int r = 0; r < 9; r++)
             for (int c = 0; c < 9; c++)
                 if (initialBoard[r][c] == 0) {
                     GradientDrawable bg = (GradientDrawable) cells[r][c].getBackground();
                     if (currentBoard[r][c] != 0 && !isCellValid(currentBoard, r, c))
-                        bg.setColor(COLOR_ERROR);
+                        bg.setColor(Color.RED);
                     else
                         bg.setColor(COLOR_NORMAL);
                     cells[r][c].setBackground(bg);
@@ -208,15 +262,13 @@ public class SudokuActivity extends AppCompatActivity {
         return true;
     }
 
-    /** Highlight selection row, column, and box **/
     private void highlightSelection(int selRow, int selCol) {
-        for (int r = 0; r < 9; r++) {
+        for (int r = 0; r < 9; r++)
             for (int c = 0; c < 9; c++) {
                 GradientDrawable bg = (GradientDrawable) cells[r][c].getBackground();
                 bg.setColor(initialBoard[r][c] != 0 ? COLOR_FIXED : COLOR_NORMAL);
                 cells[r][c].setBackground(bg);
             }
-        }
 
         for (int i = 0; i < 9; i++) {
             if (initialBoard[selRow][i] == 0)
@@ -297,38 +349,44 @@ public class SudokuActivity extends AppCompatActivity {
         return true;
     }
 
-    private int dpToPx(int dp) {
-        return Math.round(dp * getResources().getDisplayMetrics().density);
-    }
-
-    /** Check if puzzle is complete **/
-    private void checkCompletion() {
+    private void checkGameCompletion() {
         for (int r = 0; r < 9; r++)
             for (int c = 0; c < 9; c++)
                 if (currentBoard[r][c] == 0 || !isCellValid(currentBoard, r, c))
                     return;
 
+        // Game completed manually
         isSolved = true;
+        btnSave.setEnabled(false);
+        btnClear.setEnabled(false);
         showScoreDialog();
     }
 
-    /** Prompt user to enter name and save score **/
     private void showScoreDialog() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Congratulations! You solved the puzzle");
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Congratulations! You completed the puzzle");
 
-        final android.widget.EditText input = new android.widget.EditText(this);
+        final EditText input = new EditText(this);
         input.setHint("Enter your name");
         builder.setView(input);
 
         builder.setPositiveButton("OK", (dialog, which) -> {
             String name = input.getText().toString().trim();
-            int time = 0; // can be replaced with timer
+            int time = (int)((SystemClock.elapsedRealtime() - startTime) / 1000); // seconds
             dbHelper.insertScore(difficulty, time, name);
             Toast.makeText(this, "Score saved!", Toast.LENGTH_SHORT).show();
-            finish(); // return to menu
         });
+
         builder.setCancelable(false);
         builder.show();
+    }
+
+    private void updateTimer() {
+        int seconds = (int)((SystemClock.elapsedRealtime() - startTime) / 1000);
+        timerView.setText("Time: " + seconds + "s");
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 }

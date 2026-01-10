@@ -3,7 +3,9 @@ package com.example.sudoku;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -13,7 +15,7 @@ public class ScoreboardActivity extends AppCompatActivity {
 
     private ListView listViewScores;
     private SudokuDBHelper dbHelper;
-    private String difficulty = "easy"; // default
+    private String difficulty = "easy"; // default, will get from intent
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,7 +23,6 @@ public class ScoreboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_scoreboard);
 
         dbHelper = new SudokuDBHelper(this);
-
         listViewScores = findViewById(R.id.listViewScores);
 
         String diff = getIntent().getStringExtra("difficulty");
@@ -31,26 +32,22 @@ public class ScoreboardActivity extends AppCompatActivity {
 
         Button btnReset = findViewById(R.id.btnResetScores);
         btnReset.setOnClickListener(v -> {
-            dbHelper.resetScoreboard();
+            dbHelper.resetScoresForDifficulty(difficulty);
             loadScores();
-            Toast.makeText(this, "Scoreboard reset!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, difficulty + " scores reset!", Toast.LENGTH_SHORT).show();
         });
-
     }
 
     private void loadScores() {
-        Cursor cursor = dbHelper.getScores();
+        Cursor cursor = dbHelper.getScoresForDifficulty(difficulty);
         ArrayList<String> scoreList = new ArrayList<>();
 
         if (cursor != null) {
             if (cursor.moveToFirst()) {
                 do {
-                    String diff = cursor.getString(cursor.getColumnIndex("difficulty"));
+                    String player = cursor.getString(cursor.getColumnIndex("player_name"));
                     int time = cursor.getInt(cursor.getColumnIndex("time"));
-
-                    if (diff.equalsIgnoreCase(difficulty)) {
-                        scoreList.add(diff + " - " + time + "s");
-                    }
+                    scoreList.add(player + " - " + time + "s");
                 } while (cursor.moveToNext());
             }
             cursor.close();

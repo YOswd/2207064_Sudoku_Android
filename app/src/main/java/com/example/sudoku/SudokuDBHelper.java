@@ -125,14 +125,16 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         getWritableDatabase().insert("scoreboard", null, cv);
     }
 
-    public Cursor getScores() {
-        return getReadableDatabase()
-                .rawQuery("SELECT * FROM scoreboard ORDER BY time ASC", null);
+    public Cursor getScoresForDifficulty(String difficulty) {
+        return getReadableDatabase().rawQuery(
+                "SELECT * FROM scoreboard WHERE difficulty=? ORDER BY time ASC",
+                new String[]{difficulty});
     }
 
-    public void resetScoreboard() {
-        getWritableDatabase().delete("scoreboard", null, null);
+    public void resetScoresForDifficulty(String difficulty) {
+        getWritableDatabase().delete("scoreboard", "difficulty=?", new String[]{difficulty});
     }
+
 
     public String boardToString(int[][] b) {
         StringBuilder sb = new StringBuilder();
