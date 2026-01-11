@@ -23,6 +23,7 @@
         <activity android:name=".MenuActivity"/>
         <activity
             android:name=".SudokuActivity"
+            android:windowSoftInputMode="adjustPan|stateHidden"
             android:screenOrientation="unspecified" />
 
     </application>

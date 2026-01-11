@@ -94,7 +94,6 @@ public class SudokuActivity extends AppCompatActivity {
         grid.setColumnCount(9);
         grid.setRowCount(9);
 
-        // Determine available space
         int screenWidth = getResources().getDisplayMetrics().widthPixels - dpToPx(16);
         int screenHeight = getResources().getDisplayMetrics().heightPixels - dpToPx(16);
 
@@ -103,49 +102,34 @@ public class SudokuActivity extends AppCompatActivity {
 
         int boardSize;
         if (isLandscape) {
-            int buttonWidth = buttonLayout.getWidth() > 0 ? buttonLayout.getWidth() : dpToPx(120);
+            int buttonWidth = dpToPx(120);
             boardSize = Math.min(screenHeight, screenWidth - buttonWidth - dpToPx(16));
         } else {
             boardSize = Math.min(screenWidth, screenHeight);
         }
 
-        // Make grid square
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(boardSize, boardSize);
         grid.setLayoutParams(gridParams);
 
-        int cellSize = boardSize / 9; // automatic cell size
+        int cellSize = boardSize / 9;
 
         for (int r = 0; r < 9; r++) {
             for (int c = 0; c < 9; c++) {
-                EditText cell = new EditText(this);
-                cell.setGravity(Gravity.CENTER);
-                cell.setTextSize(18);
-                cell.setInputType(InputType.TYPE_CLASS_NUMBER);
-                cell.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1)});
+                CellView cell = new CellView(this, r, c);
 
                 int value = initialBoard[r][c];
-                cell.setText(value != 0 ? String.valueOf(value) : "");
-                cell.setEnabled(value == 0);
-                cell.setTextColor(Color.BLACK);
+                if (value != 0) {
+                    cell.setText(String.valueOf(value));
+                    cell.setEnabled(false);
+                    cell.setBackgroundColor(COLOR_FIXED);
+                    cell.setTextColor(0xFF000000);
+                } else {
+                    cell.setText("");
+                    cell.setBackgroundColor(COLOR_NORMAL);
+                    cell.setTextColor(0xFF000000);
 
-                // Create dynamic border with thick/thin lines
-                GradientDrawable bg = new GradientDrawable();
-                bg.setColor(value != 0 ? COLOR_FIXED : COLOR_NORMAL);
-
-                int left   = (c % 3 == 0) ? dpToPx(3) : dpToPx(1);
-                int top    = (r % 3 == 0) ? dpToPx(3) : dpToPx(1);
-                int right  = (c == 8) ? dpToPx(3) : dpToPx(1);
-                int bottom = (r == 8) ? dpToPx(3) : dpToPx(1);
-
-                bg.setStroke(dpToPx(1), Color.BLACK); // base stroke
-                cell.setBackground(bg);
-
-                // Wrap in FrameLayout to simulate thick borders
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(cellSize, cellSize);
-                cell.setLayoutParams(lp);
-
-                final int row = r, col = c;
-                if (value == 0) {
+                    final int row = r;
+                    final int col = c;
                     cell.setOnClickListener(v -> {
                         selectedCell = cell;
                         highlightSelection(row, col);
@@ -154,17 +138,21 @@ public class SudokuActivity extends AppCompatActivity {
                     cell.addTextChangedListener(new android.text.TextWatcher() {
                         @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                         @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                            currentBoard[row][col] = s.toString().isEmpty() ? 0 : Integer.parseInt(s.toString());
+                            String t = s.toString();
+                            currentBoard[row][col] = t.isEmpty() ? 0 : Integer.parseInt(t);
                             highlightRuleBreaks();
                             checkGameCompletion();
                             updateTimer();
                         }
-                        @Override public void afterTextChanged(Editable s) {}
+                        @Override public void afterTextChanged(android.text.Editable s) {}
                     });
                 }
 
+                GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+                lp.width = cellSize;
+                lp.height = cellSize;
+                grid.addView(cell, lp);
                 cells[r][c] = cell;
-                grid.addView(cell);
             }
         }
 
@@ -224,17 +212,35 @@ public class SudokuActivity extends AppCompatActivity {
     }
 
     private void highlightRuleBreaks() {
-        for (int r = 0; r < 9; r++)
-            for (int c = 0; c < 9; c++)
-                if (initialBoard[r][c] == 0) {
-                    GradientDrawable bg = (GradientDrawable) cells[r][c].getBackground();
-                    if (currentBoard[r][c] != 0 && !isCellValid(currentBoard, r, c))
-                        bg.setColor(Color.RED);
-                    else
-                        bg.setColor(COLOR_NORMAL);
-                    cells[r][c].setBackground(bg);
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                EditText cell = cells[r][c];
+
+                if (initialBoard[r][c] != 0) {
+                    cell.setBackgroundColor(COLOR_FIXED);
+                    cell.setTextColor(0xFF000000);
+                } else {
+                    if (currentBoard[r][c] != 0 && !isCellValid(currentBoard, r, c)) {
+                        cell.setBackgroundColor(Color.RED);
+                    } else {
+                        cell.setBackgroundColor(COLOR_NORMAL);
+                    }
+                    cell.setTextColor(0xFF000000);
                 }
+            }
+        }
+
+        if (selectedCell != null) {
+            for (int r = 0; r < 9; r++) {
+                for (int c = 0; c < 9; c++) {
+                    if (cells[r][c] == selectedCell) {
+                        cells[r][c].setBackgroundColor(COLOR_SELECTED);
+                    }
+                }
+            }
+        }
     }
+
 
     private boolean isCellValid(int[][] board, int row, int col) {
         int num = board[row][col];
@@ -256,18 +262,20 @@ public class SudokuActivity extends AppCompatActivity {
     }
 
     private void highlightSelection(int selRow, int selCol) {
-        for (int r = 0; r < 9; r++)
+        for (int r = 0; r < 9; r++) {
             for (int c = 0; c < 9; c++) {
-                GradientDrawable bg = (GradientDrawable) cells[r][c].getBackground();
-                bg.setColor(initialBoard[r][c] != 0 ? COLOR_FIXED : COLOR_NORMAL);
-                cells[r][c].setBackground(bg);
+                EditText cell = cells[r][c];
+                if (initialBoard[r][c] != 0) cell.setBackgroundColor(COLOR_FIXED);
+                else cell.setBackgroundColor(COLOR_NORMAL);
+                cell.setTextColor(0xFF000000); // numbers always black
             }
+        }
 
         for (int i = 0; i < 9; i++) {
             if (initialBoard[selRow][i] == 0)
-                ((GradientDrawable) cells[selRow][i].getBackground()).setColor(COLOR_RELATED);
+                cells[selRow][i].setBackgroundColor(COLOR_RELATED);
             if (initialBoard[i][selCol] == 0)
-                ((GradientDrawable) cells[i][selCol].getBackground()).setColor(COLOR_RELATED);
+                cells[i][selCol].setBackgroundColor(COLOR_RELATED);
         }
 
         int boxRow = (selRow / 3) * 3;
@@ -275,9 +283,9 @@ public class SudokuActivity extends AppCompatActivity {
         for (int r = boxRow; r < boxRow + 3; r++)
             for (int c = boxCol; c < boxCol + 3; c++)
                 if (initialBoard[r][c] == 0)
-                    ((GradientDrawable) cells[r][c].getBackground()).setColor(COLOR_RELATED);
+                    cells[r][c].setBackgroundColor(COLOR_RELATED);
 
-        ((GradientDrawable) cells[selRow][selCol].getBackground()).setColor(COLOR_SELECTED);
+        cells[selRow][selCol].setBackgroundColor(COLOR_SELECTED);
     }
 
     private void clearUserCells() {
@@ -384,7 +392,7 @@ public class SudokuActivity extends AppCompatActivity {
 
         builder.setPositiveButton("OK", (dialog, which) -> {
             String name = input.getText().toString().trim();
-            int time = (int)((SystemClock.elapsedRealtime() - startTime) / 1000); // seconds
+            int time = (int)((SystemClock.elapsedRealtime() - startTime) / 1000);
             dbHelper.insertScore(difficulty, time, name);
             Toast.makeText(this, "Score saved!", Toast.LENGTH_SHORT).show();
         });
