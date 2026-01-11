@@ -57,7 +57,7 @@ public class SudokuActivity extends AppCompatActivity {
         grid = findViewById(R.id.sudokuGrid);
         parentLayout = findViewById(R.id.parentLayout);
         buttonLayout = findViewById(R.id.buttonLayout);
-        
+
         timerView = new TextView(this);
         timerView.setTextSize(18);
         timerView.setTextColor(Color.BLACK);
@@ -66,8 +66,9 @@ public class SudokuActivity extends AppCompatActivity {
         startTime = SystemClock.elapsedRealtime();
 
         loadNewPuzzle();
-        setupGrid();
         setupButtons();
+        parentLayout.post(() -> setupGrid());
+
     }
 
     private void loadNewPuzzle() {
@@ -93,15 +94,26 @@ public class SudokuActivity extends AppCompatActivity {
         grid.setColumnCount(9);
         grid.setRowCount(9);
 
+        // Determine available space
         int screenWidth = getResources().getDisplayMetrics().widthPixels - dpToPx(16);
         int screenHeight = getResources().getDisplayMetrics().heightPixels - dpToPx(16);
 
         boolean isLandscape =
                 getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
 
-        int buttonArea = isLandscape ? dpToPx(100) : 0;
-        int boardSize = isLandscape ? Math.min(screenWidth - buttonArea, screenHeight) : Math.min(screenWidth, screenHeight);
-        int cellSize = boardSize / 9;
+        int boardSize;
+        if (isLandscape) {
+            int buttonWidth = buttonLayout.getWidth() > 0 ? buttonLayout.getWidth() : dpToPx(120);
+            boardSize = Math.min(screenHeight, screenWidth - buttonWidth - dpToPx(16));
+        } else {
+            boardSize = Math.min(screenWidth, screenHeight);
+        }
+
+        // Make grid square
+        LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(boardSize, boardSize);
+        grid.setLayoutParams(gridParams);
+
+        int cellSize = boardSize / 9; // automatic cell size
 
         for (int r = 0; r < 9; r++) {
             for (int c = 0; c < 9; c++) {
@@ -112,32 +124,28 @@ public class SudokuActivity extends AppCompatActivity {
                 cell.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1)});
 
                 int value = initialBoard[r][c];
+                cell.setText(value != 0 ? String.valueOf(value) : "");
+                cell.setEnabled(value == 0);
+                cell.setTextColor(Color.BLACK);
 
+                // Create dynamic border with thick/thin lines
                 GradientDrawable bg = new GradientDrawable();
-                bg.setStroke(dpToPx(1), Color.BLACK);
                 bg.setColor(value != 0 ? COLOR_FIXED : COLOR_NORMAL);
+
+                int left   = (c % 3 == 0) ? dpToPx(3) : dpToPx(1);
+                int top    = (r % 3 == 0) ? dpToPx(3) : dpToPx(1);
+                int right  = (c == 8) ? dpToPx(3) : dpToPx(1);
+                int bottom = (r == 8) ? dpToPx(3) : dpToPx(1);
+
+                bg.setStroke(dpToPx(1), Color.BLACK); // base stroke
                 cell.setBackground(bg);
 
-                GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-                lp.width = cellSize;
-                lp.height = cellSize;
-                lp.setMargins((c % 3 == 0) ? dpToPx(2) : dpToPx(1),
-                        (r % 3 == 0) ? dpToPx(2) : dpToPx(1),
-                        (c == 8) ? dpToPx(2) : dpToPx(1),
-                        (r == 8) ? dpToPx(2) : dpToPx(1));
+                // Wrap in FrameLayout to simulate thick borders
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(cellSize, cellSize);
                 cell.setLayoutParams(lp);
 
-                if (value != 0) {
-                    cell.setText(String.valueOf(value));
-                    cell.setEnabled(false);
-                    cell.setTextColor(Color.BLACK);
-                } else {
-                    cell.setText("");
-                    cell.setTextColor(Color.BLACK);
-
-                    final int row = r;
-                    final int col = c;
-
+                final int row = r, col = c;
+                if (value == 0) {
                     cell.setOnClickListener(v -> {
                         selectedCell = cell;
                         highlightSelection(row, col);
@@ -145,10 +153,8 @@ public class SudokuActivity extends AppCompatActivity {
 
                     cell.addTextChangedListener(new android.text.TextWatcher() {
                         @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                        @Override
-                        public void onTextChanged(CharSequence s, int start, int before, int count) {
-                            String t = s.toString();
-                            currentBoard[row][col] = t.isEmpty() ? 0 : Integer.parseInt(t);
+                        @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                            currentBoard[row][col] = s.toString().isEmpty() ? 0 : Integer.parseInt(s.toString());
                             highlightRuleBreaks();
                             checkGameCompletion();
                             updateTimer();
@@ -161,6 +167,7 @@ public class SudokuActivity extends AppCompatActivity {
                 grid.addView(cell);
             }
         }
+
         highlightRuleBreaks();
     }
 
@@ -204,21 +211,7 @@ public class SudokuActivity extends AppCompatActivity {
             if (!isSolved) clearUserCells();
         });
 
-        btnNew.setOnClickListener(v -> {
-            int[][] puzzle = dbHelper.getRandomPuzzle(difficulty);
-            if (puzzle != null) {
-                initialBoard = puzzle;
-                copyInitialToCurrent();
-                isSolved = false;
-                btnSave.setEnabled(true);
-                btnClear.setEnabled(true);
-                setupGrid();
-                startTime = SystemClock.elapsedRealtime();
-                updateTimer();
-            } else {
-                Toast.makeText(this, "No puzzle found for " + difficulty, Toast.LENGTH_SHORT).show();
-            }
-        });
+        btnNew.setOnClickListener(v -> startNewGame());
 
         btnSave.setOnClickListener(v -> {
             if (!isSolved) {
@@ -349,13 +342,32 @@ public class SudokuActivity extends AppCompatActivity {
         return true;
     }
 
+    private void startNewGame() {
+        int[][] puzzle = dbHelper.getRandomPuzzle(difficulty);
+        if (puzzle == null) {
+            Toast.makeText(this, "No puzzle found for " + difficulty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        initialBoard = puzzle;
+        copyInitialToCurrent();
+        isSolved = false;
+
+        btnSave.setEnabled(true);
+        btnClear.setEnabled(true);
+
+        startTime = SystemClock.elapsedRealtime();
+        updateTimer();
+
+        setupGrid();
+    }
+
     private void checkGameCompletion() {
         for (int r = 0; r < 9; r++)
             for (int c = 0; c < 9; c++)
                 if (currentBoard[r][c] == 0 || !isCellValid(currentBoard, r, c))
                     return;
 
-        // Game completed manually
         isSolved = true;
         btnSave.setEnabled(false);
         btnClear.setEnabled(false);

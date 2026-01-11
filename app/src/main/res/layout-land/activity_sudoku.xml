@@ -10,9 +10,8 @@
 
     <GridLayout
         android:id="@+id/sudokuGrid"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_weight="1"
         android:columnCount="9"
         android:rowCount="9"
         android:background="#000000"
@@ -23,7 +22,7 @@
         android:orientation="vertical"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="0dp"
         android:gravity="center_vertical">
 
         <Button
