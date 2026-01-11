@@ -26,7 +26,7 @@ public class CellView extends EditText {
     private void init() {
         borderPaint = new Paint();
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setColor(0xFF000000); // black
+        borderPaint.setColor(0xFF000000);
         borderPaint.setStrokeWidth(2f);
 
         setGravity(android.view.Gravity.CENTER);

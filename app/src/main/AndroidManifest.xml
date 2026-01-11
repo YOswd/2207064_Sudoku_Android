@@ -21,10 +21,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".MenuActivity"/>
+        <activity android:name=".ScoreboardActivity" />
         <activity
             android:name=".SudokuActivity"
             android:windowSoftInputMode="adjustPan|stateHidden"
-            android:screenOrientation="unspecified" />
+            android:screenOrientation="unspecified"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
     </application>
 
