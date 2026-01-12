@@ -79,21 +79,6 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public int[][] getRandomPuzzle(String difficulty) {
-        SQLiteDatabase db = getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT board FROM puzzles WHERE difficulty=? ORDER BY RANDOM() LIMIT 1",
-                new String[]{difficulty});
-
-        if (c.moveToFirst()) {
-            int[][] board = stringToBoard(c.getString(0));
-            c.close();
-            return board;
-        }
-        c.close();
-        return null;
-    }
-
     public void saveGame(String difficulty, int[][] initial, int[][] current) {
         SQLiteDatabase db = getWritableDatabase();
         db.delete("saved_game", "difficulty=?", new String[]{difficulty});

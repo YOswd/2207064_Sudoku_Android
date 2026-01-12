@@ -113,16 +113,26 @@ public class SudokuActivity extends AppCompatActivity {
     }
 
     private void loadNewPuzzle() {
-        int[][] puzzle = dbHelper.getRandomPuzzle(difficulty);
-        if (puzzle != null) {
-            initialBoard = puzzle;
-            copyInitialToCurrent();
-            isSolved = false;
-            startTime = SystemClock.elapsedRealtime();
-            updateTimer();
-        } else {
-            Toast.makeText(this, "No puzzle found for " + difficulty, Toast.LENGTH_SHORT).show();
-        }
+        Toast.makeText(this, "Loading puzzle from cloud...", Toast.LENGTH_SHORT).show();
+        FirestoreHelper firestoreHelper = new FirestoreHelper();
+        firestoreHelper.getRandomPuzzle(difficulty, new FirestoreHelper.PuzzleCallback() {
+            @Override
+            public void onPuzzleLoaded(int[][] puzzle) {
+                android.util.Log.d("SudokuActivity", "Puzzle successfully loaded from Firestore");
+                initialBoard = puzzle;
+                copyInitialToCurrent();
+                isSolved = false;
+                startTime = SystemClock.elapsedRealtime();
+                updateTimer();
+                setupGrid();
+            }
+
+            @Override
+            public void onError(String error) {
+                android.util.Log.e("SudokuActivity", "Firestore error: " + error);
+                Toast.makeText(SudokuActivity.this, "Error: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void copyInitialToCurrent() {
