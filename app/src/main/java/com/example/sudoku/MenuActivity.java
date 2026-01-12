@@ -26,7 +26,7 @@ public class MenuActivity extends AppCompatActivity {
         Button btnScoreboard = findViewById(R.id.btnScoreboard);
         Button btnExit = findViewById(R.id.btnExit);
 
-        updateDifficultyButtonText();
+        //updateDifficultyButtonText();
 
         btnDifficulty.setOnClickListener(v -> showDifficulty());
 
@@ -84,14 +84,14 @@ public class MenuActivity extends AppCompatActivity {
                 .setTitle("Select Difficulty")
                 .setSingleChoiceItems(d, checkedItem, (dialog, which) -> {
                     difficulty = d[which];
-                    updateDifficultyButtonText();
+                    //updateDifficultyButtonText();
                 })
                 .setPositiveButton("OK", null)
                 .show();
     }
 
-    private void updateDifficultyButtonText() {
-        String cap = difficulty.substring(0, 1).toUpperCase() + difficulty.substring(1);
-        btnDifficulty.setText("Difficulty: " + cap);
-    }
+//    private void updateDifficultyButtonText() {
+//        String cap = difficulty.substring(0, 1).toUpperCase() + difficulty.substring(1);
+//        btnDifficulty.setText("Difficulty: " + cap);
+//    }
 }
