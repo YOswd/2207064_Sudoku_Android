@@ -83,7 +83,7 @@ public class MenuActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Select Difficulty")
                 .setSingleChoiceItems(d, checkedItem, (dialog, which) -> {
-                    difficulty = d[which].toLowerCase();
+                    difficulty = d[which];
                     updateDifficultyButtonText();
                 })
                 .setPositiveButton("OK", null)

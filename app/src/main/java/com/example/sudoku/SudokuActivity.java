@@ -350,7 +350,6 @@ public class SudokuActivity extends AppCompatActivity {
         
         btnSolve.setOnClickListener(v -> {
             if (isSolved) return;
-            // Solve but DO NOT show scoreboard
             if (solveSudoku()) {
                 Toast.makeText(this, "Puzzle solved! (No Score)", Toast.LENGTH_SHORT).show();
                 isSolved = true;
