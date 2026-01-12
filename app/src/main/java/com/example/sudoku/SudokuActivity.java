@@ -53,8 +53,9 @@ public class SudokuActivity extends AppCompatActivity {
         setContentView(R.layout.activity_sudoku);
 
         dbHelper = new SudokuDBHelper(this);
+        
         difficulty = getIntent().getStringExtra("difficulty");
-        if (difficulty == null) difficulty = "easy";
+        if (difficulty == null) difficulty = "Easy";
 
         grid = findViewById(R.id.sudokuGrid);
         parentLayout = findViewById(R.id.parentLayout);
@@ -67,7 +68,7 @@ public class SudokuActivity extends AppCompatActivity {
         parentLayout.addView(timerView, 0);
 
         if (savedInstanceState != null) {
-            difficulty = savedInstanceState.getString("difficulty", "easy");
+            difficulty = savedInstanceState.getString("difficulty", "Easy");
             initialBoard = dbHelper.stringToBoard(savedInstanceState.getString("initialBoard"));
             currentBoard = dbHelper.stringToBoard(savedInstanceState.getString("currentBoard"));
             isSolved = savedInstanceState.getBoolean("isSolved", false);
@@ -75,7 +76,18 @@ public class SudokuActivity extends AppCompatActivity {
             selectedRow = savedInstanceState.getInt("selectedRow", -1);
             selectedCol = savedInstanceState.getInt("selectedCol", -1);
         } else {
-            loadNewPuzzle();
+            String initialStr = getIntent().getStringExtra("initial");
+            String currentStr = getIntent().getStringExtra("current");
+            
+            if (initialStr != null && currentStr != null) {
+                initialBoard = dbHelper.stringToBoard(initialStr);
+                currentBoard = dbHelper.stringToBoard(currentStr);
+                isSolved = false;
+                startTime = SystemClock.elapsedRealtime();
+                updateTimer();
+            } else {
+                loadNewPuzzle();
+            }
         }
 
         initializeButtonObjects();
@@ -174,7 +186,7 @@ public class SudokuActivity extends AppCompatActivity {
             centerLayout.addView(timerView);
             
             if (grid.getParent() != null) ((ViewGroup)grid.getParent()).removeView(grid);
-            LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(boardSize, boardSize); // Grid takes calculated size
+            LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(boardSize, boardSize);
             grid.setLayoutParams(gridParams);
             centerLayout.addView(grid);
             
@@ -338,12 +350,12 @@ public class SudokuActivity extends AppCompatActivity {
         
         btnSolve.setOnClickListener(v -> {
             if (isSolved) return;
+            // Solve but DO NOT show scoreboard
             if (solveSudoku()) {
-                Toast.makeText(this, "Puzzle solved!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Puzzle solved! (No Score)", Toast.LENGTH_SHORT).show();
                 isSolved = true;
                 btnSave.setEnabled(false);
                 btnClear.setEnabled(false);
-                showScoreDialog();
             } else {
                 Toast.makeText(this, "Cannot solve puzzle", Toast.LENGTH_SHORT).show();
             }
@@ -516,6 +528,7 @@ public class SudokuActivity extends AppCompatActivity {
             int time = (int)((SystemClock.elapsedRealtime() - startTime) / 1000);
             dbHelper.insertScore(difficulty, time, name);
             Toast.makeText(this, "Score saved!", Toast.LENGTH_SHORT).show();
+            finish();
         });
 
         builder.setCancelable(false);

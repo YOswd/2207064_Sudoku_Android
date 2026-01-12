@@ -9,8 +9,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MenuActivity extends AppCompatActivity {
 
-    private String difficulty = "easy";
+    private String difficulty = "Easy";
     private SudokuDBHelper db;
+    private Button btnDifficulty;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,22 +22,30 @@ public class MenuActivity extends AppCompatActivity {
 
         Button btnNew = findViewById(R.id.btnNewGame);
         Button btnResume = findViewById(R.id.btnResume);
-        Button btnDifficulty = findViewById(R.id.btnDifficulty);
+        btnDifficulty = findViewById(R.id.btnDifficulty);
         Button btnScoreboard = findViewById(R.id.btnScoreboard);
         Button btnExit = findViewById(R.id.btnExit);
+
+        updateDifficultyButtonText();
 
         btnDifficulty.setOnClickListener(v -> showDifficulty());
 
         btnNew.setOnClickListener(v -> {
-            Intent i = new Intent(this, SudokuActivity.class);
-            i.putExtra("difficulty", difficulty);
-            i.putExtra("newGame", true);
-            startActivity(i);
+            if (db.hasSavedGame(difficulty)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Start New Game")
+                        .setMessage("Previous saved game will be discarded! Do you wish to continue")
+                        .setPositiveButton("OK", (dialog, which) -> startNewGame())
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            } else {
+                startNewGame();
+            }
         });
 
         btnResume.setOnClickListener(v -> {
             if (!db.hasSavedGame(difficulty)) {
-                Toast.makeText(this, "No saved game", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No saved game for " + difficulty, Toast.LENGTH_SHORT).show();
                 return;
             }
             int[][][] boards = db.loadGame(difficulty);
@@ -49,22 +58,40 @@ public class MenuActivity extends AppCompatActivity {
 
         btnScoreboard.setOnClickListener(v -> {
             Intent i = new Intent(this, ScoreboardActivity.class);
-            i.putExtra("difficulty", difficulty); // pass current difficulty
+            i.putExtra("difficulty", difficulty); 
             startActivity(i);
         });
 
         btnExit.setOnClickListener(v -> finish());
     }
 
+    private void startNewGame() {
+        db.deleteSavedGame(difficulty);
+        
+        Intent i = new Intent(this, SudokuActivity.class);
+        i.putExtra("difficulty", difficulty);
+        i.putExtra("newGame", true);
+        startActivity(i);
+    }
+
     private void showDifficulty() {
         String[] d = {"Easy", "Medium", "Hard"};
+        int checkedItem = 0;
+        if (difficulty.equals("Medium")) checkedItem = 1;
+        else if (difficulty.equals("Hard")) checkedItem = 2;
+
         new AlertDialog.Builder(this)
-                .setTitle("Difficulty")
-                .setSingleChoiceItems(d,
-                        difficulty.equals("easy") ? 0 :
-                                difficulty.equals("medium") ? 1 : 2,
-                        (dialog, which) -> difficulty = d[which].toLowerCase())
+                .setTitle("Select Difficulty")
+                .setSingleChoiceItems(d, checkedItem, (dialog, which) -> {
+                    difficulty = d[which].toLowerCase();
+                    updateDifficultyButtonText();
+                })
                 .setPositiveButton("OK", null)
                 .show();
+    }
+
+    private void updateDifficultyButtonText() {
+        String cap = difficulty.substring(0, 1).toUpperCase() + difficulty.substring(1);
+        btnDifficulty.setText("Difficulty: " + cap);
     }
 }

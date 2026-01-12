@@ -15,7 +15,7 @@ public class ScoreboardActivity extends AppCompatActivity {
 
     private ListView listViewScores;
     private SudokuDBHelper dbHelper;
-    private String difficulty = "easy"; // default, will get from intent
+    private String difficulty = "Easy";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
