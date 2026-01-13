@@ -40,10 +40,11 @@ public class SudokuActivity extends AppCompatActivity {
 
     private Button btnSolve, btnClear, btnNew, btnSave;
 
-    private static final int COLOR_SELECTED = Color.parseColor("#B3E5FC");
-    private static final int COLOR_RELATED  = Color.parseColor("#E1F5FE");
-    private static final int COLOR_NORMAL   = Color.WHITE;
-    private static final int COLOR_FIXED    = Color.LTGRAY;
+    private static int COLOR_SELECTED;
+    private static int COLOR_RELATED;
+    private static int COLOR_NORMAL;
+    private static int COLOR_FIXED;
+    private static int COLOR_ERROR;
 
     private long startTime = 0;
 
@@ -90,8 +91,17 @@ public class SudokuActivity extends AppCompatActivity {
             }
         }
 
+        initializeColors();
         initializeButtonObjects();
         parentLayout.post(this::setupGrid);
+    }
+
+    private void initializeColors() {
+        COLOR_SELECTED = androidx.core.content.ContextCompat.getColor(this, R.color.selection_bg);
+        COLOR_RELATED = androidx.core.content.ContextCompat.getColor(this, R.color.related_bg);
+        COLOR_NORMAL = Color.WHITE;
+        COLOR_FIXED = Color.parseColor("#F5F5F5");
+        COLOR_ERROR = androidx.core.content.ContextCompat.getColor(this, R.color.error);
     }
 
     @Override
@@ -288,9 +298,11 @@ public class SudokuActivity extends AppCompatActivity {
                 lp.width = cellSize;
                 lp.height = cellSize;
                 
-                int rightMargin = (c + 1) % 3 == 0 && c != 8 ? dpToPx(4) : dpToPx(1);
-                int bottomMargin = (r + 1) % 3 == 0 && r != 8 ? dpToPx(4) : dpToPx(1);
+                int rightMargin = (c + 1) % 3 == 0 && c != 8 ? dpToPx(3) : dpToPx(1);
+                int bottomMargin = (r + 1) % 3 == 0 && r != 8 ? dpToPx(3) : dpToPx(1);
                 lp.setMargins(dpToPx(1), dpToPx(1), rightMargin, bottomMargin);
+                
+                cell.setBackgroundResource(R.drawable.cell_background);
                 
                 grid.addView(cell, lp);
                 cells[r][c] = cell;
@@ -332,6 +344,10 @@ public class SudokuActivity extends AppCompatActivity {
             if (initialBoard[selectedRow][selectedCol] == 0) {
                 currentBoard[selectedRow][selectedCol] = num;
                 selectedCell.setText(String.valueOf(num));
+                
+                if (isCellConflicting(selectedRow, selectedCol)) {
+                    selectedCell.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                }
                 
                 updateGridColors();
                 checkGameCompletion();
@@ -417,11 +433,18 @@ public class SudokuActivity extends AppCompatActivity {
                 }
 
                 if (isCellConflicting(r, c)) {
-                    bg = Color.RED; 
+                    bg = COLOR_ERROR; 
                 }
                 
                 cell.setBackgroundColor(bg);
                 cell.setTextColor(Color.BLACK);
+                
+                // Add a slight transparency to related cells for better look
+                if (bg == COLOR_RELATED) {
+                    cell.getBackground().setAlpha(180);
+                } else {
+                    if (cell.getBackground() != null) cell.getBackground().setAlpha(255);
+                }
             }
         }
     }

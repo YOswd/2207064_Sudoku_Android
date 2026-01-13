@@ -3,6 +3,7 @@ package com.example.sudoku;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,7 +12,8 @@ public class MenuActivity extends AppCompatActivity {
 
     private String difficulty = "Easy";
     private SudokuDBHelper db;
-    private Button btnDifficulty;
+    private View btnDifficulty;
+    private android.widget.TextView txtDifficultyValue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,11 +22,13 @@ public class MenuActivity extends AppCompatActivity {
 
         db = new SudokuDBHelper(this);
 
-        Button btnNew = findViewById(R.id.btnNewGame);
-        Button btnResume = findViewById(R.id.btnResume);
+        View btnNew = findViewById(R.id.btnNewGame);
+        View btnResume = findViewById(R.id.btnResume);
         btnDifficulty = findViewById(R.id.btnDifficulty);
-        Button btnScoreboard = findViewById(R.id.btnScoreboard);
+        View btnScoreboard = findViewById(R.id.btnScoreboard);
         Button btnExit = findViewById(R.id.btnExit);
+        txtDifficultyValue = findViewById(R.id.txtDifficultyValue);
+        txtDifficultyValue.setText(difficulty);
 
         btnDifficulty.setOnClickListener(v -> showDifficulty());
 
@@ -82,6 +86,7 @@ public class MenuActivity extends AppCompatActivity {
                 .setTitle("Select Difficulty")
                 .setSingleChoiceItems(d, checkedItem, (dialog, which) -> {
                     difficulty = d[which];
+                    txtDifficultyValue.setText(difficulty);
                 })
                 .setPositiveButton("OK", null)
                 .show();

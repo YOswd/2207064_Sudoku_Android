@@ -2,6 +2,7 @@ package com.example.sudoku;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -12,7 +13,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button btnPlay = findViewById(R.id.btnPlay);
+        View btnPlay = findViewById(R.id.btnPlay);
         Button btnExit = findViewById(R.id.btnExit);
 
         btnPlay.setOnClickListener(v ->

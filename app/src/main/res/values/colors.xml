@@ -2,4 +2,13 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- Design Tokens -->
+    <color name="primary">#3F51B5</color>
+    <color name="primary_dark">#303F9F</color>
+    <color name="accent">#FFC107</color>
+    <color name="surface">#F5F5F7</color>
+    <color name="error">#EF5350</color>
+    <color name="selection_bg">#C5CAE9</color>
+    <color name="related_bg">#E8EAF6</color>
 </resources>
