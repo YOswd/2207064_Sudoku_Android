@@ -140,6 +140,21 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
     }
 
 
+    public int[][] getRandomLocalPuzzle(String difficulty) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT board FROM puzzles WHERE difficulty=? ORDER BY RANDOM() LIMIT 1",
+                new String[]{difficulty});
+
+        if (c.moveToFirst()) {
+            int[][] board = stringToBoard(c.getString(0));
+            c.close();
+            return board;
+        }
+        c.close();
+        return null;
+    }
+
     public String boardToString(int[][] b) {
         StringBuilder sb = new StringBuilder();
         for (int[] r : b)

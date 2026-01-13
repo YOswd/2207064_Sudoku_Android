@@ -130,7 +130,19 @@ public class SudokuActivity extends AppCompatActivity {
             @Override
             public void onError(String error) {
                 android.util.Log.e("SudokuActivity", "Firestore error: " + error);
-                Toast.makeText(SudokuActivity.this, "Error: " + error, Toast.LENGTH_LONG).show();
+                Toast.makeText(SudokuActivity.this, "Cloud error. Loading local puzzle...", Toast.LENGTH_SHORT).show();
+                
+                int[][] localPuzzle = dbHelper.getRandomLocalPuzzle(difficulty);
+                if (localPuzzle != null) {
+                    initialBoard = localPuzzle;
+                    copyInitialToCurrent();
+                    isSolved = false;
+                    startTime = SystemClock.elapsedRealtime();
+                    updateTimer();
+                    setupGrid();
+                } else {
+                    Toast.makeText(SudokuActivity.this, "Error: " + error, Toast.LENGTH_LONG).show();
+                }
             }
         });
     }
