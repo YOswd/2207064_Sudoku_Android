@@ -18,7 +18,7 @@ import java.util.Random;
 public class SudokuDBHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "sudoku.db";
-    private static final int DB_VERSION = 9;
+    private static final int DB_VERSION = 10;
     private Context context;
 
     public SudokuDBHelper(Context context) {
@@ -37,7 +37,8 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE saved_game(" +
                 "difficulty TEXT PRIMARY KEY," +
                 "initial_board TEXT," +
-                "current_board TEXT)");
+                "current_board TEXT," +
+                "elapsed_time INTEGER DEFAULT 0)");
 
         db.execSQL("CREATE TABLE scoreboard(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -83,7 +84,7 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public void saveGame(String difficulty, int[][] initial, int[][] current) {
+    public void saveGame(String difficulty, int[][] initial, int[][] current, int elapsedTime) {
         SQLiteDatabase db = getWritableDatabase();
         db.delete("saved_game", "difficulty=?", new String[]{difficulty});
 
@@ -91,6 +92,7 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         cv.put("difficulty", difficulty);
         cv.put("initial_board", boardToString(initial));
         cv.put("current_board", boardToString(current));
+        cv.put("elapsed_time", elapsedTime);
         db.insert("saved_game", null, cv);
     }
 
@@ -108,12 +110,15 @@ public class SudokuDBHelper extends SQLiteOpenHelper {
         return exists;
     }
 
-    public int[][][] loadGame(String difficulty) {
+    public Cursor getSavedGame(String difficulty) {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT initial_board,current_board FROM saved_game WHERE difficulty=?",
+        return db.rawQuery(
+                "SELECT initial_board, current_board, elapsed_time FROM saved_game WHERE difficulty=?",
                 new String[]{difficulty});
+    }
 
+    public int[][][] loadGame(String difficulty) {
+        Cursor c = getSavedGame(difficulty);
         if (c.moveToFirst()) {
             int[][][] data = new int[2][9][9];
             data[0] = stringToBoard(c.getString(0));

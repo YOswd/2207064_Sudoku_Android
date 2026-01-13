@@ -11,4 +11,14 @@
     <color name="error">#EF5350</color>
     <color name="selection_bg">#C5CAE9</color>
     <color name="related_bg">#E8EAF6</color>
+
+    <!-- Sudoku Board & Game Aesthetics -->
+    <color name="grid_line_color">#3E2723</color>
+    <color name="cell_bg_normal">#FDF5E6</color>
+    <color name="cell_bg_fixed">#EADDCA</color>
+    <color name="cell_text_fixed">#1A0F0D</color>
+    <color name="cell_text_user">#3F51B5</color>
+    <color name="cell_bg_selected">#FFECB3</color>
+    <color name="cell_bg_related">#F5DEB3</color>
+    <color name="game_bg_color">#FAF9F6</color>
 </resources>

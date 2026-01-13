@@ -6,7 +6,8 @@
     android:gravity="center"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:background="@color/game_bg_color">
 
     <GridLayout
         android:id="@+id/sudokuGrid"
@@ -14,7 +15,7 @@
         android:layout_height="match_parent"
         android:columnCount="9"
         android:rowCount="9"
-        android:background="#000000"
+        android:background="@color/grid_line_color"
         android:padding="2dp"/>
 
     <LinearLayout

@@ -11,13 +11,6 @@ public class CellView extends EditText {
     private Paint borderPaint;
     private int row, col;
 
-    public CellView(Context context, int r, int c) {
-        super(context);
-        this.row = r;
-        this.col = c;
-        init();
-    }
-
     public CellView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();

@@ -50,12 +50,19 @@ public class MenuActivity extends AppCompatActivity {
                 Toast.makeText(this, "No saved game for " + difficulty, Toast.LENGTH_SHORT).show();
                 return;
             }
-            int[][][] boards = db.loadGame(difficulty);
-            Intent i = new Intent(this, SudokuActivity.class);
-            i.putExtra("difficulty", difficulty);
-            i.putExtra("initial", db.boardToString(boards[0]));
-            i.putExtra("current", db.boardToString(boards[1]));
-            startActivity(i);
+            android.database.Cursor cursor = db.getSavedGame(difficulty);
+            if (cursor.moveToFirst()) {
+                Intent i = new Intent(this, SudokuActivity.class);
+                i.putExtra("difficulty", difficulty);
+                i.putExtra("initial", cursor.getString(0));
+                i.putExtra("current", cursor.getString(1));
+                i.putExtra("savedTime", cursor.getInt(2));
+                cursor.close();
+                startActivity(i);
+            } else {
+                cursor.close();
+                Toast.makeText(this, "Error loading saved game", Toast.LENGTH_SHORT).show();
+            }
         });
 
         btnScoreboard.setOnClickListener(v -> {

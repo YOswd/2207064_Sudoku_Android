@@ -47,6 +47,16 @@ public class SudokuActivity extends AppCompatActivity {
     private static int COLOR_ERROR;
 
     private long startTime = 0;
+    private final android.os.Handler timerHandler = new android.os.Handler();
+    private final Runnable timerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isSolved) {
+                updateTimer();
+                timerHandler.postDelayed(this, 1000);
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,9 +73,10 @@ public class SudokuActivity extends AppCompatActivity {
         buttonLayout = findViewById(R.id.buttonLayout);
 
         timerView = new TextView(this);
-        timerView.setTextSize(18);
-        timerView.setTextColor(Color.BLACK);
+        timerView.setTextSize(20);
+        timerView.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.primary));
         timerView.setGravity(Gravity.CENTER);
+        timerView.setPadding(0, dpToPx(8), 0, dpToPx(8));
         parentLayout.addView(timerView, 0);
 
         if (savedInstanceState != null) {
@@ -84,7 +95,9 @@ public class SudokuActivity extends AppCompatActivity {
                 initialBoard = dbHelper.stringToBoard(initialStr);
                 currentBoard = dbHelper.stringToBoard(currentStr);
                 isSolved = false;
-                startTime = SystemClock.elapsedRealtime();
+                
+                int savedTime = getIntent().getIntExtra("savedTime", 0);
+                startTime = SystemClock.elapsedRealtime() - (savedTime * 1000L);
                 updateTimer();
             } else {
                 loadNewPuzzle();
@@ -97,11 +110,25 @@ public class SudokuActivity extends AppCompatActivity {
     }
 
     private void initializeColors() {
-        COLOR_SELECTED = androidx.core.content.ContextCompat.getColor(this, R.color.selection_bg);
-        COLOR_RELATED = androidx.core.content.ContextCompat.getColor(this, R.color.related_bg);
-        COLOR_NORMAL = Color.WHITE;
-        COLOR_FIXED = Color.parseColor("#F5F5F5");
+        COLOR_SELECTED = androidx.core.content.ContextCompat.getColor(this, R.color.cell_bg_selected);
+        COLOR_RELATED = androidx.core.content.ContextCompat.getColor(this, R.color.cell_bg_related);
+        COLOR_NORMAL = androidx.core.content.ContextCompat.getColor(this, R.color.cell_bg_normal);
+        COLOR_FIXED = androidx.core.content.ContextCompat.getColor(this, R.color.cell_bg_fixed);
         COLOR_ERROR = androidx.core.content.ContextCompat.getColor(this, R.color.error);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!isSolved) {
+            timerHandler.post(timerRunnable);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        timerHandler.removeCallbacks(timerRunnable);
     }
 
     @Override
@@ -134,6 +161,8 @@ public class SudokuActivity extends AppCompatActivity {
                 isSolved = false;
                 startTime = SystemClock.elapsedRealtime();
                 updateTimer();
+                timerHandler.removeCallbacks(timerRunnable);
+                timerHandler.post(timerRunnable);
                 setupGrid();
             }
 
@@ -149,6 +178,8 @@ public class SudokuActivity extends AppCompatActivity {
                     isSolved = false;
                     startTime = SystemClock.elapsedRealtime();
                     updateTimer();
+                    timerHandler.removeCallbacks(timerRunnable);
+                    timerHandler.post(timerRunnable);
                     setupGrid();
                 } else {
                     Toast.makeText(SudokuActivity.this, "Error: " + error, Toast.LENGTH_LONG).show();
@@ -259,10 +290,19 @@ public class SudokuActivity extends AppCompatActivity {
         grid.setColumnCount(9);
         grid.setRowCount(9);
 
-        int totalMarginLoss = dpToPx(36);
+        int paddingBase = dpToPx(3);
+
+        int totalMarginLoss = dpToPx(28); 
         int availableCellSpace = boardSize - totalMarginLoss;
         if (availableCellSpace < 0) availableCellSpace = 0;
         int cellSize = availableCellSpace / 9;
+        
+        int remaining = (boardSize - totalMarginLoss) % 9;
+        int pL = paddingBase + (remaining / 2);
+        int pT = paddingBase + (remaining / 2);
+        int pR = paddingBase + (remaining - (remaining / 2));
+        int pB = paddingBase + (remaining - (remaining / 2));
+        grid.setPadding(pL, pT, pR, pB);
 
         for (int r = 0; r < 9; r++) {
             for (int c = 0; c < 9; c++) {
@@ -297,10 +337,10 @@ public class SudokuActivity extends AppCompatActivity {
                 GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
                 lp.width = cellSize;
                 lp.height = cellSize;
-                
-                int rightMargin = (c + 1) % 3 == 0 && c != 8 ? dpToPx(3) : dpToPx(1);
-                int bottomMargin = (r + 1) % 3 == 0 && r != 8 ? dpToPx(3) : dpToPx(1);
-                lp.setMargins(dpToPx(1), dpToPx(1), rightMargin, bottomMargin);
+
+                int mR = (c == 2 || c == 5) ? dpToPx(3) : dpToPx(1);
+                int mB = (r == 2 || r == 5) ? dpToPx(3) : dpToPx(1);
+                lp.setMargins(dpToPx(1), dpToPx(1), mR, mB);
                 
                 cell.setBackgroundResource(R.drawable.cell_background);
                 
@@ -402,7 +442,8 @@ public class SudokuActivity extends AppCompatActivity {
         btnNew.setOnClickListener(v -> startNewGame());
         btnSave.setOnClickListener(v -> {
             if (!isSolved) {
-                dbHelper.saveGame(difficulty, initialBoard, currentBoard);
+                int elapsedSeconds = (int) ((SystemClock.elapsedRealtime() - startTime) / 1000);
+                dbHelper.saveGame(difficulty, initialBoard, currentBoard, elapsedSeconds);
                 Toast.makeText(this, "Game saved!", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Cannot save solved game", Toast.LENGTH_SHORT).show();
@@ -437,9 +478,15 @@ public class SudokuActivity extends AppCompatActivity {
                 }
                 
                 cell.setBackgroundColor(bg);
-                cell.setTextColor(Color.BLACK);
-                
-                // Add a slight transparency to related cells for better look
+
+                if (initialBoard[r][c] != 0) {
+                    cell.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.cell_text_fixed));
+                    cell.setTypeface(null, android.graphics.Typeface.BOLD);
+                } else {
+                    cell.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.cell_text_user));
+                    cell.setTypeface(null, android.graphics.Typeface.NORMAL);
+                }
+
                 if (bg == COLOR_RELATED) {
                     cell.getBackground().setAlpha(180);
                 } else {
@@ -569,8 +616,9 @@ public class SudokuActivity extends AppCompatActivity {
 
         builder.setPositiveButton("OK", (dialog, which) -> {
             String name = input.getText().toString().trim();
-            int time = (int)((SystemClock.elapsedRealtime() - startTime) / 1000);
-            dbHelper.insertScore(difficulty, time, name);
+            long elapsedMillis = SystemClock.elapsedRealtime() - startTime;
+            int timeInSeconds = (int) (elapsedMillis / 1000);
+            dbHelper.insertScore(difficulty, timeInSeconds, name);
             Toast.makeText(this, "Score saved!", Toast.LENGTH_SHORT).show();
             finish();
         });
@@ -580,8 +628,13 @@ public class SudokuActivity extends AppCompatActivity {
     }
 
     private void updateTimer() {
-        int seconds = (int)((SystemClock.elapsedRealtime() - startTime) / 1000);
-        timerView.setText("Time: " + seconds + "s");
+        long elapsedMillis = SystemClock.elapsedRealtime() - startTime;
+        int totalSeconds = (int) (elapsedMillis / 1000);
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        
+        String timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d", minutes, seconds);
+        timerView.setText("Time: " + timeStr);
     }
 
     private int dpToPx(int dp) {
